@@ -1,1 +1,172 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <title>⚡ NeuroZip Compression Lab</title>
 
+    <link
+      href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css"
+      rel="stylesheet"
+    />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;600&display=swap"
+      rel="stylesheet"
+    />
+
+    <link
+      rel="stylesheet"
+      href="{{ url_for('static', filename='style.css') }}"
+    />
+  </head>
+
+  <body>
+    <div class="container py-5">
+      <h1 class="text-center mb-4 title">
+        <span class="title-text">⚡ NeuroZip</span>
+        <br />
+        <span class="subtitle">Intelligent Compression Visualizer</span>
+      </h1>
+
+      <div class="row g-4">
+        <div class="col-md-6">
+          <div class="glass-card p-4">
+            <textarea id="text" class="form-control mb-3"></textarea>
+            <button onclick="compress()" class="btn w-100 btn-custom">
+              Compress Text
+            </button>
+          </div>
+        </div>
+
+        <div class="col-md-6">
+          <div class="glass-card p-4">
+            <input type="file" id="file" class="form-control mb-3 " />
+            <button onclick="uploadFile()" class="btn w-100 btn-custom">
+              Compress File
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <div id="output" class="mt-5"></div>
+    </div>
+
+    <script>
+      function safeFetch(url, options) {
+        return fetch(url, options).then(async (res) => {
+          if (!res.ok) {
+            let text = await res.text();
+            console.error(text);
+            throw new Error("Server Error " + res.status);
+          }
+          return res.json();
+        });
+      }
+
+      function render(data) {
+        if (data.error) {
+          alert(data.error);
+          return;
+        }
+
+        let codes = Object.keys(data.codes)
+          .map((k) => `<div><b>${k}</b> → ${data.codes[k]}</div>`)
+          .join("");
+
+        let decodingRows = Object.keys(data.decoding)
+          .map((c) => `<tr><td>${c}</td><td>${data.decoding[c]}</td></tr>`)
+          .join("");
+
+        document.getElementById("output").innerHTML = `
+          <div class="glass-card p-4 fade-in">
+
+          <h4>📊 Huffman Codes</h4>
+          <div class="code-box mb-4" >${codes}</div>
+
+          <h4>🔄 Decoding Table</h4>
+          <table class="custom-table mb-4">
+          <tr>
+            <th>Code</th>
+            <th>Character</th>
+          </tr>
+          ${decodingRows}
+          </table>
+
+          <h4>🔐 Encoded</h4>
+          <p class="encoded-text mb-4">${data.encoded}</p>
+
+          <h4>🔓 Decoded</h4>
+          <p class="encoded-text mb-4">${data.decoded}</p>
+          <h4 class="mt-4">📉 Compression Insights</h4>
+
+          <div class="stats-grid mb-4">
+
+            <div class="stat-card gradient-1">
+              <span>Original Bits</span>
+              <h5>${data.original_bits}</h5>
+            </div>
+
+            <div class="stat-card gradient-2">
+              <span>Compressed Bits</span>
+              <h5>${data.compressed_bits}</h5>
+            </div>
+
+            <div class="stat-card gradient-3">
+              <span>Decoding Bits</span>
+              <h5>${data.decoding_bits}</h5>
+            </div>
+
+            <div class="stat-card gradient-4">
+              <span>Total Bits</span>
+              <h5>${data.total_bits}</h5>
+            </div>
+
+            <div class="stat-card gradient-5">
+              <span>Compression Ratio</span>
+              <h5>${data.ratio}</h5>
+            </div>
+
+          </div>
+
+          <h4 class="mb-4">🌳 Huffman Tree</h4>
+        <img src="${data.tree}" class="img-fluid mb-4 tree-img">
+
+          <h4 class="mb-2">⏱ Time</h4>
+          <p>${data.time} sec</p>
+
+          </div>
+          `;
+      }
+
+      function compress() {
+        let text = document.getElementById("text").value;
+
+        safeFetch("/compress", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ text }),
+        })
+          .then(render)
+          .catch((err) => alert(err));
+      }
+
+      function uploadFile() {
+        let fileInput = document.getElementById("file");
+
+        if (fileInput.files.length === 0) {
+          alert("Select a file first");
+          return;
+        }
+
+        let formData = new FormData();
+        formData.append("file", fileInput.files[0]);
+
+        safeFetch("/upload", {
+          method: "POST",
+          body: formData,
+        })
+          .then(render)
+          .catch((err) => alert(err));
+      }
+    </script>
+  </body>
+</html>
